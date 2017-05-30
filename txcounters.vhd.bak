@@ -5,27 +5,23 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.common.all;
 
-entity rxcounters is
+entity txcounters is
 	port (
-		RxClk : in std_logic;
+		TxClk : in std_logic;
 		
 		FrameStart : in std_logic;
 		FrameSizeOK : out std_logic;
 		CurrentField : out field_indicator;
 		
 		IFGStart : in std_logic;
-		IFGCntEq12 : out std_logic;
-		
-		--DEBUG
-		FrameCntDEBUG : out std_logic_vector(11 downto 0);
-		IFGCntDEBUG : out std_logic_vector(4 downto 0)
+		IFGCntEq12 : out std_logic
 		
 	);
-end entity rxcounters;
+end entity txcounters;
 
-architecture RTL of rxcounters is
+architecture RTL of txcounters is
 	--Licznik odpalany jest wraz z rozpoczęciem odbioru adresu MAC
-	--Ilość bajtów liczonych (bez preambuły i SFD) musi sie mieścić między 64-1518 bajtów
+	--Ilość bajtów liczonych musi sie mieścić między 72-1526 bajtów
 	--dodatkowo licznik pokazuje część ramki która jest odczytywana
 	signal FrameCnt : std_logic_vector(11 downto 0) := (others => '0');
 	
@@ -35,9 +31,6 @@ architecture RTL of rxcounters is
 	signal IFGCntEq12sig : std_logic;
 	
 begin	
-	FrameCntDEBUG <= FrameCnt;
-	IFGCntDEBUG <= IFGCnt;
-	
 	IFGCntEq12 <= IFGCntEq12sig;
 	
 	frame_cntr : process (RxClk) is
@@ -51,12 +44,13 @@ begin
 		end if;
 	end process frame_cntr;
 	
-	FrameSizeOK <=  '1' when (FrameCnt >= 128 and FrameCnt <= 3036) else
+	FrameSizeOK <=  '1' when (FrameCnt >= 144 and FrameCnt <= 3052) else
 					'0';
 								
-	CurrentField <= dst_mac when (FrameCnt >= 0 and FrameCnt < 12) else
-					src_mac when (FrameCnt >= 12 and FrameCnt < 24) else
-					frame_type when (FrameCnt >= 24 and FrameCnt < 28) else
+	CurrentField <= preamble when (FrameCnt >= 0 and FrameCnt < 14) else
+					sfd0 when (FrameCnt >= 14 and FrameCnt < 15) else
+					sfd1 when (FrameCnt >= 15 and FrameCnt < 16) else
+					data_pad when (FrameCnt >= 16 and FrameCnt < 136) else
 					data;
 	
 	
